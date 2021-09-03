@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      width: 100%;
+    }
+
+    main {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      height: 100vh;
+    }
+
+    h1 {
+      align-self: center;
+    }
+
+    .web-chat-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .users-section {
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      align-items: center;
+      width: 30%;
+      height: 75vh;
+      border: 1px solid black;
+    }
+
+    .nickname-input-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      width: 100%;
+      height: 10vh;
+    }
+
+    .nickname-input-container form {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      width: 90%;
+      height: 80%;
+      border: 1px solid black;
+      border-radius: 15px;
+    }
+
+    .users-div-container {
+      width: 100%;
+    }
+
+    .chat-section {
+      width: 60%;
+      height: 75vh;
+      border: 1px solid black;
+    }
+
+    .chat-container {
+      max-height: 75vh;
+    }
+
+    .chat-input-container {
+      position: fixed;
+      bottom: 0;
+      width: 100%;
+      height: 10vh;
+    }
+
+    .chat-input-container form {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .chat-input-container input {
+      width: 75%;
+    }
+
+    .chat-input-container button {
+      width: 15%;
+    }
+
+    li {
+      list-style-type: none;
+    }
+  </style>
+  <title>Marcelo Campos - WebChat</title>
+</head>
+<body>
+  <main>
+    <h1>WebChat</h1>
+    <div class="web-chat-container">
+      <section class="users-section">
+        <div class="nickname-input-container">
+          <form action="" id="nickname-form">
+            <input
+              id="nickname-input"
+              autocomplete="off"
+              data-testid="nickname-box"
+            />
+            <button type='submit' data-testid="nickname-button">Change Nickname</button>
+          </form>
+        </div>
+        <div class="users-div-container">
+          <ul id="users-container">
+          </ul>
+        </div>
+      </section>
+      <section class="chat-section">
+        <div class="chat-container">
+          <ul id="messages">
+          </ul>
+        </div>
+      </section>
+    </div>
+    <div class="chat-input-container">
+      <form action="" id='message-form'>
+        <input
+          id="input-message"
+          autocomplete="off"
+          data-testid="message-box"
+        />
+        <button type='submit' data-testid="send-button">Send Message</button>
+      </form>
+    </div>
+  </main>
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = window.io();
+
+    socket.emit('login');
+
+    const messageInput = document.getElementById('input-message');
+    const messagesContainer = document.getElementById('messages');
+    const usersContainer = document.getElementById('users-container');
+    const nickNameInput = document.getElementById('nickname-input');
+
+    let nickname;
+
+    document.getElementById('message-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      socket.emit('message', {
+        chatMessage: messageInput.value,
+        nickname,
+      });
+      messageInput.value = '';
+    });
+
+    document.getElementById('nickname-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const newNickname = nickNameInput.value;
+      nickname = newNickname;
+      socket.emit('changeNickname', nickname);
+    });
+
+    const createMessage = (message) => {
+      const newLi = document.createElement('li');
+      newLi.innerText = message;
+      newLi.setAttribute('data-testid', 'message');
+      messagesContainer.appendChild(newLi);
+    };
+
+    const setUser = (nickname) => {
+      const newLi = document.createElement('li');
+      newLi.innerText = nickname;
+      newLi.setAttribute('data-testid', 'online-user');
+      usersContainer.insertBefore(newLi, newLi.nextElementSibling);
+    }
+
+    socket.on('message', (message) => createMessage(message));
+
+    socket.on('login', (userNickname) => {
+      nickname = userNickname;
+    });
+
+    socket.on('sendAllUsers', (users) => {
+      usersContainer.innerHTML = '';
+      setUser(nickname);
+      const nicknames = users.reduce((acc, user) => {
+        if (user.nickname === nickname) {
+          return acc;
+        }
+        return [...acc, user.nickname];
+      }, []);
+      nicknames.map(setUser);
+    });
+
+    socket.on('oldMessages', (messages) => messages.map(createMessage));
+
+  </script>
+</body>
+</html>
